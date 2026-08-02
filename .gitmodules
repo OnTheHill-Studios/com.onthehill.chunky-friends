@@ -1,0 +1,3 @@
+[submodule "ai-specs/standards"]
+	path = ai-specs/standards
+	url = git@github.com:OnTheHill-Studios/ai-standards.git
