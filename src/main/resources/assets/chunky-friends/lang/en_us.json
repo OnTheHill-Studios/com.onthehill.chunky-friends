@@ -1,0 +1,20 @@
+{
+    "gui.chunky-friends.config.title": "Chunky Friends Configuration",
+    "gui.chunky-friends.config.ring_count": "Ring Tier Count",
+    "gui.chunky-friends.config.max_radius": "Maximum Radius (blocks, or e.g. 500c for chunks)",
+    "gui.chunky-friends.config.curve": "Growth Curve",
+    "gui.chunky-friends.config.curve_linear": "Linear",
+    "gui.chunky-friends.config.curve_quadratic": "Quadratic",
+    "gui.chunky-friends.config.save": "Save",
+    "gui.chunky-friends.config.cancel": "Cancel",
+    "message.chunky-friends.config.no_permission": "You do not have permission to view or change the Chunky Friends configuration.",
+    "message.chunky-friends.config.invalid_values": "Those Chunky Friends configuration values are out of range and were rejected.",
+    "message.chunky-friends.config.saved": "Chunky Friends configuration updated.",
+    "message.chunky-friends.config.not_ready": "Chunky Friends has not finished starting up yet — try again in a moment.",
+    "message.chunky-friends.config.invalid_radius_format": "Couldn't parse that radius. Use a plain number of blocks (e.g. 8000) or a number of chunks followed by 'c' (e.g. 500c).",
+    "command.chunky-friends.config.current": "Ring count: %s, Max radius: %s blocks (%s chunks), Curve: %s",
+    "message.chunky-friends.client_not_supported": "This server does not have Chunky Friends installed — the config GUI is unavailable here.",
+    "message.chunky-friends.client_version_mismatch": "This server has a different version of Chunky Friends' config protocol — the config GUI may not work until versions match.",
+    "message.chunky-friends.gui_requires_player": "This command must be run by a connected player — it opens that player's client GUI, which doesn't mean anything from the console/RCON. Use /chunkyfriends config instead.",
+    "message.chunky-friends.gui_client_missing_mod": "Couldn't open the config GUI — your client doesn't appear to have Chunky Friends installed. Use /chunkyfriends config instead."
+}

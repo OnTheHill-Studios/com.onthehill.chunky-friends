@@ -1,4 +1,4 @@
-# Chunky Shared
+# Chunky Friends
 
 ## Setup
 

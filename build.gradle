@@ -26,7 +26,7 @@ loom {
 	splitEnvironmentSourceSets()
 
 	mods {
-		"chunky-shared" {
+		"chunky-friends" {
 			sourceSet sourceSets.main
 			sourceSet sourceSets.client
 		}

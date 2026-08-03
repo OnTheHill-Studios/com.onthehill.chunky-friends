@@ -1,37 +1,37 @@
 {
 	"schemaVersion": 1,
-	"id": "chunky-shared",
+	"id": "chunky-friends",
 	"version": "${version}",
-	"name": "Chunky Shared",
+	"name": "Chunky Friends",
 	"description": "A server-side Minecraft mod that orders and prioritizes chunky pregeneration based on player locations",
 	"authors": [
 		"ExodusOTH"
 	],
 	"contact": {
 		"homepage": "https://github.com/OnTheHill-Studios",
-		"sources": "https://github.com/OnTheHill-Studios/com.othstudios.chunkyshared"
+		"sources": "https://github.com/OnTheHill-Studios/com.onthehill.chunkyfriends"
 	},
 	"license": "MIT-License",
-	"icon": "assets/chunky-shared/icon.png",
+	"icon": "assets/chunky-friends/icon.png",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"com.othstudios.chunkyshared.ChunkyShared"
+			"com.onthehill.chunkyfriends.ChunkyFriends"
 		],
 		"client": [
-			"com.othstudios.chunkyshared.client.ChunkySharedClient"
+			"com.onthehill.chunkyfriends.client.ChunkyFriendsClient"
 		],
 		"fabric-datagen": [
-			"com.othstudios.chunkyshared.client.ChunkySharedDataGenerator"
+			"com.onthehill.chunkyfriends.client.ChunkyFriendsDataGenerator"
 		],
 		"modmenu": [
-			"com.othstudios.chunkyshared.client.ChunkySharedModMenu"
+			"com.onthehill.chunkyfriends.client.ChunkyFriendsModMenu"
 		]
 	},
 	"mixins": [
-		"chunky-shared.mixins.json",
+		"chunky-friends.mixins.json",
 		{
-			"config": "chunky-shared.client.mixins.json",
+			"config": "chunky-friends.client.mixins.json",
 			"environment": "client"
 		}
 	],

@@ -10,4 +10,4 @@ pluginManagement {
 }
 
 // Should match your modid
-rootProject.name = 'chunky-shared'
+rootProject.name = 'chunky-friends'
