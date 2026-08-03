@@ -3,15 +3,15 @@
 	"id": "chunky-shared",
 	"version": "${version}",
 	"name": "Chunky Shared",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"description": "A server-side Minecraft mod that orders and prioritizes chunky pregeneration based on player locations",
 	"authors": [
-		"Me!"
+		"ExodusOTH"
 	],
 	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
+		"homepage": "https://github.com/OnTheHill-Studios",
+		"sources": "https://github.com/OnTheHill-Studios/com.othstudios.chunkyshared"
 	},
-	"license": "CC0-1.0",
+	"license": "MIT-License",
 	"icon": "assets/chunky-shared/icon.png",
 	"environment": "*",
 	"entrypoints": {
@@ -23,6 +23,9 @@
 		],
 		"fabric-datagen": [
 			"com.othstudios.chunkyshared.client.ChunkySharedDataGenerator"
+		],
+		"modmenu": [
+			"com.othstudios.chunkyshared.client.ChunkySharedModMenu"
 		]
 	},
 	"mixins": [
@@ -36,6 +39,10 @@
 		"fabricloader": ">=0.19.3",
 		"minecraft": "~26.2",
 		"java": ">=25",
-		"fabric-api": "*"
+		"fabric-api": "*",
+		"chunky": ">=1.3.38"
+	},
+	"suggests": {
+		"modmenu": ">=20.0.0"
 	}
 }

@@ -12,6 +12,14 @@ repositories {
 	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
 	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
 	// for more information about repositories.
+	maven {
+		name = 'CodeMC'
+		url = 'https://repo.codemc.io/repository/maven-public/'
+	}
+	maven {
+		name = 'TerraformersMC'
+		url = 'https://maven.terraformersmc.com/releases/'
+	}
 }
 
 loom {
@@ -38,6 +46,22 @@ dependencies {
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	// Chunky's API, compiled directly against rather than reflected into. Chunky is a hard
+	// dependency declared in fabric.mod.json, so this is safe to compile against directly.
+	compileOnly "org.popcraft:chunky-common:${project.chunky_version}"
+
+	// ModMenu is an optional (soft) dependency, referenced only from the "modmenu" client entrypoint —
+	// nothing else touches its classes, so the mod still loads and works fine without it installed.
+	clientCompileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
+
+	testImplementation platform("org.junit:junit-bom:${project.junit_version}")
+	testImplementation "org.junit.jupiter:junit-jupiter"
+	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+}
+
+test {
+	useJUnitPlatform()
 }
 
 processResources {

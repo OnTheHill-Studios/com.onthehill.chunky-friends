@@ -1,0 +1,20 @@
+{
+    "gui.chunky-shared.config.title": "Chunky Shared Configuration",
+    "gui.chunky-shared.config.ring_count": "Ring Tier Count",
+    "gui.chunky-shared.config.max_radius": "Maximum Radius (blocks, or e.g. 500c for chunks)",
+    "gui.chunky-shared.config.curve": "Growth Curve",
+    "gui.chunky-shared.config.curve_linear": "Linear",
+    "gui.chunky-shared.config.curve_quadratic": "Quadratic",
+    "gui.chunky-shared.config.save": "Save",
+    "gui.chunky-shared.config.cancel": "Cancel",
+    "message.chunky-shared.config.no_permission": "You do not have permission to view or change the Chunky Shared configuration.",
+    "message.chunky-shared.config.invalid_values": "Those Chunky Shared configuration values are out of range and were rejected.",
+    "message.chunky-shared.config.saved": "Chunky Shared configuration updated.",
+    "message.chunky-shared.config.not_ready": "Chunky Shared has not finished starting up yet — try again in a moment.",
+    "message.chunky-shared.config.invalid_radius_format": "Couldn't parse that radius. Use a plain number of blocks (e.g. 8000) or a number of chunks followed by 'c' (e.g. 500c).",
+    "command.chunky-shared.config.current": "Ring count: %s, Max radius: %s blocks (%s chunks), Curve: %s",
+    "message.chunky-shared.client_not_supported": "This server does not have Chunky Shared installed — the config GUI is unavailable here.",
+    "message.chunky-shared.client_version_mismatch": "This server has a different version of Chunky Shared's config protocol — the config GUI may not work until versions match.",
+    "message.chunky-shared.gui_requires_player": "This command must be run by a connected player — it opens that player's client GUI, which doesn't mean anything from the console/RCON. Use /chunkyshared config instead.",
+    "message.chunky-shared.gui_client_missing_mod": "Couldn't open the config GUI — your client doesn't appear to have Chunky Shared installed. Use /chunkyshared config instead."
+}
