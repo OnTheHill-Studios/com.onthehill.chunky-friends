@@ -21,12 +21,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Loads and saves per-player pregeneration state to {@code <world>/data/chunkyfriends_state.json}.
+ * Loads and saves per-player pregeneration state to {@code <world>/data/chunky-friends_state.json}.
  */
 public final class PlayerStateStore
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(PlayerStateStore.class);
-    private static final String STATE_FILE_NAME = "chunkyfriends_state.json";
+    private static final String STATE_FILE_NAME = "chunky-friends_state.json";
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Type STATE_MAP_TYPE = new TypeToken<Map<UUID, PlayerPregenState>>() { }.getType();
 

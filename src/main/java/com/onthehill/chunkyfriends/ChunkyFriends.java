@@ -89,7 +89,7 @@ public class ChunkyFriends implements ModInitializer
     {
         if (_config == null)
         {
-            _config = ChunkyFriendsConfig.load(FabricLoader.getInstance().getConfigDir().resolve("chunkyfriends.json"));
+            _config = ChunkyFriendsConfig.load(FabricLoader.getInstance().getConfigDir().resolve("chunky-friends.json"));
             _pregenScheduler = new PregenScheduler(new ChunkyGateway(), _config);
             ConfigNetworking.registerServerReceivers(_config, this::onCurveConfigChanged);
         }

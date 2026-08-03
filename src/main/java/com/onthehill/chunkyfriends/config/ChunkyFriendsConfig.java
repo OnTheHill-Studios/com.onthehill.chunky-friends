@@ -163,7 +163,7 @@ public final class ChunkyFriendsConfig
     /**
      * Loads the configuration from the given file, writing a default file at that path first if it does not exist.
      *
-     * @param configFilePath Path to the config file, e.g. {@code config/chunkyfriends.json}.
+     * @param configFilePath Path to the config file, e.g. {@code config/chunky-friends.json}.
      * @return The loaded configuration, or a default instance if the file could not be read.
      */
     public static ChunkyFriendsConfig load(final Path configFilePath)
@@ -210,7 +210,7 @@ public final class ChunkyFriendsConfig
     /**
      * Writes this configuration to the given file, creating parent directories as needed.
      *
-     * @param configFilePath Path to the config file, e.g. {@code config/chunkyfriends.json}.
+     * @param configFilePath Path to the config file, e.g. {@code config/chunky-friends.json}.
      */
     public void save(final Path configFilePath)
     {
