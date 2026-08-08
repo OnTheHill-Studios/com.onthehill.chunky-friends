@@ -30,11 +30,10 @@ public final class PlayerSelector
      */
     public static Optional<PlayerPregenState> selectNext(final Collection<PlayerPregenState> states, final long nowEpochMillis, final ChunkyFriendsConfig config)
     {
-        final long qualifyingWindowMillis = config.getQualifyingWindowHours() * MILLIS_PER_HOUR;
         PlayerPregenState best = null;
         for (final PlayerPregenState state : states)
         {
-            if (nowEpochMillis - state.getLastSeenEpochMillis() >= qualifyingWindowMillis)
+            if (!isEligible(state, nowEpochMillis, config))
             {
                 continue;
             }
@@ -48,6 +47,23 @@ public final class PlayerSelector
             }
         }
         return Optional.ofNullable(best);
+    }
+
+    /**
+     * Checks whether a player is "eligible" — i.e. not evicted by the qualifying window — independent of
+     * whether their ring coverage is already complete. This is a strict subset of {@link #selectNext}'s
+     * candidacy check: a fully-covered player who was seen recently is still eligible in this sense, they are
+     * just no longer a selection candidate (see {@code PregenScheduler.eligiblePlayers}).
+     *
+     * @param state The player state to check.
+     * @param nowEpochMillis Current time, in epoch millis.
+     * @param config Scheduling configuration, supplying the qualifying window.
+     * @return {@code true} if the player was seen within the qualifying window.
+     */
+    public static boolean isEligible(final PlayerPregenState state, final long nowEpochMillis, final ChunkyFriendsConfig config)
+    {
+        final long qualifyingWindowMillis = config.getQualifyingWindowHours() * MILLIS_PER_HOUR;
+        return nowEpochMillis - state.getLastSeenEpochMillis() < qualifyingWindowMillis;
     }
 
     private static boolean isBetterCandidate(final PlayerPregenState candidate, final PlayerPregenState current)

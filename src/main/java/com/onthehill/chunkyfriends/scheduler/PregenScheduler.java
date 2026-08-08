@@ -1,6 +1,9 @@
 package com.onthehill.chunkyfriends.scheduler;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -183,6 +186,55 @@ public final class PregenScheduler
         persist();
     }
 
+    /**
+     * Gets a snapshot of the single currently-active pregeneration job, if any.
+     *
+     * @return A snapshot of the active job, or {@link Optional#empty()} if no job is currently active.
+     */
+    public Optional<ActiveJobSnapshot> activeJobSnapshot()
+    {
+        if (_schedulerState._activePlayerUuid == null)
+        {
+            return Optional.empty();
+        }
+        final PlayerPregenState state = _playerStates.get(_schedulerState._activePlayerUuid);
+        final String displayName = state != null ? state.getLastKnownName() : null;
+        final int ringTier = state != null ? state.getCurrentRingTier() + 1 : 0;
+        return Optional.of(new ActiveJobSnapshot(
+                _schedulerState._activePlayerUuid,
+                displayName,
+                _schedulerState._activeWorld,
+                ringTier,
+                _config.getRingCount(),
+                _schedulerState._lastProgressPercent,
+                _schedulerState._lastProgressChunks,
+                _schedulerState._lastProgressRate,
+                _schedulerState._presencePaused,
+                _schedulerState._lastProgressEventEpochMillis));
+    }
+
+    /**
+     * Gets every tracked player currently eligible — i.e. not evicted by the qualifying window — independent
+     * of whether their ring coverage is already complete.
+     *
+     * @param nowEpochMillis Current time, in epoch millis.
+     * @return Eligible players, sorted by last-known display name (nulls last, case-insensitive) for stable,
+     *     readable command output.
+     */
+    public List<PlayerPregenState> eligiblePlayers(final long nowEpochMillis)
+    {
+        final List<PlayerPregenState> eligible = new ArrayList<>();
+        for (final PlayerPregenState state : _playerStates.values())
+        {
+            if (PlayerSelector.isEligible(state, nowEpochMillis, _config))
+            {
+                eligible.add(state);
+            }
+        }
+        eligible.sort(Comparator.comparing(PlayerPregenState::getLastKnownName, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)));
+        return eligible;
+    }
+
     private void onServerTick(final MinecraftServer server)
     {
         if (_schedulerState._activePlayerUuid != null && !_schedulerState._presencePaused)
@@ -222,6 +274,10 @@ public final class PregenScheduler
         }
         _ticksSinceLastProgress = 0;
         _schedulerState._lastCompleteFlag = event.complete();
+        _schedulerState._lastProgressPercent = event.progress();
+        _schedulerState._lastProgressChunks = event.chunks();
+        _schedulerState._lastProgressRate = event.rate();
+        _schedulerState._lastProgressEventEpochMillis = System.currentTimeMillis();
 
         final long now = System.currentTimeMillis();
         if (now - _lastProgressLogEpochMillis >= _config.getProgressLogIntervalSeconds() * 1000L)
@@ -308,6 +364,10 @@ public final class PregenScheduler
         _schedulerState._activeWorld = null;
         _schedulerState._presencePaused = false;
         _schedulerState._lastCompleteFlag = false;
+        _schedulerState._lastProgressPercent = 0;
+        _schedulerState._lastProgressChunks = 0;
+        _schedulerState._lastProgressRate = 0;
+        _schedulerState._lastProgressEventEpochMillis = 0;
     }
 
     private PlayerPregenState getOrCreateState(final UUID playerUuid)
@@ -367,5 +427,9 @@ public final class PregenScheduler
         private String _activeWorld;
         private boolean _presencePaused;
         private boolean _lastCompleteFlag;
+        private double _lastProgressPercent;
+        private long _lastProgressChunks;
+        private double _lastProgressRate;
+        private long _lastProgressEventEpochMillis;
     }
 }

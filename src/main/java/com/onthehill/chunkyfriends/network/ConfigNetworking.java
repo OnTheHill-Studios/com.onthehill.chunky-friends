@@ -1,6 +1,10 @@
 package com.onthehill.chunkyfriends.network;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.UUID;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -16,6 +20,10 @@ import org.slf4j.LoggerFactory;
 
 import com.onthehill.chunkyfriends.ChunkyFriends;
 import com.onthehill.chunkyfriends.config.ChunkyFriendsConfig;
+import com.onthehill.chunkyfriends.player.PlayerPregenState;
+import com.onthehill.chunkyfriends.scheduler.ActiveJobSnapshot;
+import com.onthehill.chunkyfriends.scheduler.PregenScheduler;
+import com.onthehill.chunkyfriends.scheduler.TerrainPreviewSampler;
 
 /**
  * Registers the network protocol backing the client-side configuration GUI, and applies changes to the
@@ -132,6 +140,12 @@ public final class ConfigNetworking
         PayloadTypeRegistry.serverboundPlay().register(ConfigUpdatePayload.TYPE, ConfigUpdatePayload.CODEC);
         PayloadTypeRegistry.clientboundPlay().register(ConfigStatePayload.TYPE, ConfigStatePayload.CODEC);
         PayloadTypeRegistry.clientboundPlay().register(OpenConfigGuiPayload.TYPE, OpenConfigGuiPayload.CODEC);
+        PayloadTypeRegistry.serverboundPlay().register(MapPreviewRequestPayload.TYPE, MapPreviewRequestPayload.CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(MapPreviewResponsePayload.TYPE, MapPreviewResponsePayload.CODEC);
+        PayloadTypeRegistry.serverboundPlay().register(StatusRequestPayload.TYPE, StatusRequestPayload.CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(StatusResponsePayload.TYPE, StatusResponsePayload.CODEC);
+        PayloadTypeRegistry.serverboundPlay().register(PlayersRequestPayload.TYPE, PlayersRequestPayload.CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(PlayersResponsePayload.TYPE, PlayersResponsePayload.CODEC);
     }
 
     /**
@@ -140,13 +154,17 @@ public final class ConfigNetworking
      * this can only run once a real server has started and that configuration has been loaded.
      *
      * @param config The live scheduler configuration this protocol reads from and mutates.
+     * @param scheduler The live pregeneration scheduler the status/players GUI panels read from.
      * @param onCurveChanged Invoked whenever an applied update actually changes {@code ringCount},
      *     {@code maxRadiusChunks}, or {@code curveExponent} — see {@link #applyUpdate}.
      */
-    public static void registerServerReceivers(final ChunkyFriendsConfig config, final Runnable onCurveChanged)
+    public static void registerServerReceivers(final ChunkyFriendsConfig config, final PregenScheduler scheduler, final Runnable onCurveChanged)
     {
         ServerPlayNetworking.registerGlobalReceiver(ConfigRequestPayload.TYPE, (payload, context) -> handleRequest(context.player(), config));
         ServerPlayNetworking.registerGlobalReceiver(ConfigUpdatePayload.TYPE, (payload, context) -> handleUpdate(context.player(), payload, config, onCurveChanged));
+        ServerPlayNetworking.registerGlobalReceiver(MapPreviewRequestPayload.TYPE, (payload, context) -> handleMapPreviewRequest(context.player(), payload));
+        ServerPlayNetworking.registerGlobalReceiver(StatusRequestPayload.TYPE, (payload, context) -> handleStatusRequest(context.player(), scheduler));
+        ServerPlayNetworking.registerGlobalReceiver(PlayersRequestPayload.TYPE, (payload, context) -> handlePlayersRequest(context.player(), scheduler, config));
     }
 
     /**
@@ -248,6 +266,86 @@ public final class ConfigNetworking
                 player.getGameProfile().name(), player.getUUID(), payload.ringCount(), payload.maxRadiusChunks(), payload.quadratic());
         player.sendSystemMessage(Component.translatable("message.chunky-friends.config.saved"));
         ServerPlayNetworking.send(player, toStatePayload(config));
+    }
+
+    private static void handleMapPreviewRequest(final ServerPlayer player, final MapPreviewRequestPayload payload)
+    {
+        if (!hasPermission((PermissionContextOwner) player))
+        {
+            LOGGER.warn("Denied map preview request from {} ({}) — insufficient permission ({}).",
+                    player.getGameProfile().name(), player.getUUID(), CONFIG_PERMISSION);
+            return;
+        }
+        TerrainPreviewSampler.sampleAsync(player, payload, response ->
+        {
+            if (player.hasDisconnected())
+            {
+                return;
+            }
+            ServerPlayNetworking.send(player, response);
+        });
+    }
+
+    private static void handleStatusRequest(final ServerPlayer player, final PregenScheduler scheduler)
+    {
+        if (scheduler == null || !hasPermission((PermissionContextOwner) player))
+        {
+            return;
+        }
+        ServerPlayNetworking.send(player, toStatusResponsePayload(scheduler));
+    }
+
+    private static void handlePlayersRequest(final ServerPlayer player, final PregenScheduler scheduler, final ChunkyFriendsConfig config)
+    {
+        if (scheduler == null || !hasPermission((PermissionContextOwner) player))
+        {
+            return;
+        }
+        ServerPlayNetworking.send(player, toPlayersResponsePayload(scheduler, config));
+    }
+
+    /**
+     * Builds a structured status snapshot for the config screen's status panel, from the same data
+     * {@code /chunkyfriends status} reports in chat. Shared by the silent GUI-open request handler above and
+     * {@code ChunkyFriendsCommand.status}, so both paths always agree on what "the current status" is.
+     *
+     * @param scheduler The live pregeneration scheduler to read from.
+     * @return The corresponding {@link StatusResponsePayload}.
+     */
+    public static StatusResponsePayload toStatusResponsePayload(final PregenScheduler scheduler)
+    {
+        final Optional<ActiveJobSnapshot> snapshot = scheduler.activeJobSnapshot();
+        final int eligibleCount = scheduler.eligiblePlayers(System.currentTimeMillis()).size();
+        if (snapshot.isEmpty())
+        {
+            return new StatusResponsePayload(false, "", "", 0, 0, 0, 0, 0, false, eligibleCount);
+        }
+        final ActiveJobSnapshot job = snapshot.get();
+        final String displayName = job.playerDisplayName() != null ? job.playerDisplayName() : job.playerUuid().toString();
+        return new StatusResponsePayload(true, displayName, job.world(), job.ringTier(), job.ringCount(),
+                job.progressPercent(), job.chunks(), job.chunksPerSecond(), job.presencePaused(), eligibleCount);
+    }
+
+    /**
+     * Builds a structured eligible-players snapshot for the config screen's players panel, from the same data
+     * {@code /chunkyfriends players} reports in chat. Shared by the silent GUI-open request handler above and
+     * {@code ChunkyFriendsCommand.players}, so both paths always agree on what "the current players" is.
+     *
+     * @param scheduler The live pregeneration scheduler to read from.
+     * @param config The live scheduler configuration, supplying {@code ringCount} for each entry.
+     * @return The corresponding {@link PlayersResponsePayload}.
+     */
+    public static PlayersResponsePayload toPlayersResponsePayload(final PregenScheduler scheduler, final ChunkyFriendsConfig config)
+    {
+        final List<PlayerPregenState> eligible = scheduler.eligiblePlayers(System.currentTimeMillis());
+        final UUID activePlayerUuid = scheduler.activeJobSnapshot().map(ActiveJobSnapshot::playerUuid).orElse(null);
+        final List<PlayersResponsePayload.PlayerEntry> entries = new ArrayList<>();
+        for (final PlayerPregenState state : eligible)
+        {
+            final String displayName = state.getLastKnownName() != null ? state.getLastKnownName() : state.getPlayerUuid().toString();
+            entries.add(new PlayersResponsePayload.PlayerEntry(displayName, state.getCurrentRingTier(), config.getRingCount(), state.getPlayerUuid().equals(activePlayerUuid)));
+        }
+        return new PlayersResponsePayload(entries);
     }
 
     /**

@@ -7,6 +7,7 @@ import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 
+import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 
@@ -15,7 +16,10 @@ import com.onthehill.chunkyfriends.client.screen.ChunkyFriendsConfigScreen;
 import com.onthehill.chunkyfriends.network.ConfigRequestPayload;
 import com.onthehill.chunkyfriends.network.ConfigStatePayload;
 import com.onthehill.chunkyfriends.network.ConfigUpdatePayload;
+import com.onthehill.chunkyfriends.network.MapPreviewResponsePayload;
 import com.onthehill.chunkyfriends.network.OpenConfigGuiPayload;
+import com.onthehill.chunkyfriends.network.PlayersResponsePayload;
+import com.onthehill.chunkyfriends.network.StatusResponsePayload;
 
 /**
  * Registers and caches the client side of the configuration GUI's network protocol, and detects whether the
@@ -24,6 +28,7 @@ import com.onthehill.chunkyfriends.network.OpenConfigGuiPayload;
 public final class ConfigNetworkingClient
 {
     private static final SystemToast.SystemToastId TOAST_ID = new SystemToast.SystemToastId();
+    private static final SystemToast.SystemToastId OPENING_TOAST_ID = new SystemToast.SystemToastId();
 
     private static ConfigStatePayload _lastKnownState;
     private static ProtocolSupport _protocolSupport = ProtocolSupport.NOT_INSTALLED;
@@ -52,7 +57,40 @@ public final class ConfigNetworkingClient
         // Always preceded by a ConfigStatePayload (see ConfigNetworking.openGuiFor), so _lastKnownState is
         // already fresh by the time this fires and the screen opens pre-populated with real values.
         ClientPlayNetworking.registerGlobalReceiver(OpenConfigGuiPayload.TYPE, (payload, context) ->
-                Minecraft.getInstance().setScreenAndShow(new ChunkyFriendsConfigScreen()));
+        {
+            // The GUI is actually open now — the "opening…" toast (see showOpeningToast) has served its
+            // purpose and would otherwise sit on screen for its full default duration regardless, reading as
+            // a stale leftover next to the screen it was announcing.
+            SystemToast.forceHide(Minecraft.getInstance().gui.toastManager(), OPENING_TOAST_ID);
+            Minecraft.getInstance().setScreenAndShow(new ChunkyFriendsConfigScreen());
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(MapPreviewResponsePayload.TYPE, (payload, context) ->
+        {
+            final ChunkyFriendsConfigScreen openScreen = ChunkyFriendsConfigScreen.getOpenInstance();
+            if (openScreen != null)
+            {
+                openScreen.applyMapPreview(payload);
+            }
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(StatusResponsePayload.TYPE, (payload, context) ->
+        {
+            final ChunkyFriendsConfigScreen openScreen = ChunkyFriendsConfigScreen.getOpenInstance();
+            if (openScreen != null)
+            {
+                openScreen.applyStatusResponse(payload);
+            }
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(PlayersResponsePayload.TYPE, (payload, context) ->
+        {
+            final ChunkyFriendsConfigScreen openScreen = ChunkyFriendsConfigScreen.getOpenInstance();
+            if (openScreen != null)
+            {
+                openScreen.applyPlayersResponse(payload);
+            }
+        });
 
         ClientPlayConnectionEvents.JOIN.register((listener, sender, client) ->
         {
@@ -63,6 +101,25 @@ public final class ConfigNetworkingClient
                 showUnsupportedToast(_protocolSupport);
             }
         });
+
+        // Fired the instant the player sends /chunkyfriends gui, before any server round trip — the command
+        // itself gives no feedback until ChunkyFriendsCommand.openGui's response arrives, which could be a
+        // tick or several away under server load, and a player with no visible acknowledgement at all tends to
+        // just run the command again (and again). This shows a toast immediately so they know it was received.
+        ClientSendMessageEvents.COMMAND.register(command ->
+        {
+            if ("chunkyfriends gui".equalsIgnoreCase(command.trim()))
+            {
+                showOpeningToast();
+            }
+        });
+    }
+
+    private static void showOpeningToast()
+    {
+        SystemToast.add(Minecraft.getInstance().gui.toastManager(), OPENING_TOAST_ID,
+                Component.translatable("gui.chunky-friends.config.opening_toast_title"),
+                Component.translatable("gui.chunky-friends.config.opening_toast_description"));
     }
 
     private static ProtocolSupport detectProtocolSupport()

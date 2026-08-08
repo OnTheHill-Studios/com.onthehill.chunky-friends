@@ -82,7 +82,7 @@ public class ChunkyFriends implements ModInitializer
                 _pregenScheduler.onPlayerDisconnect(listener.getPlayer());
             }
         });
-        CommandRegistrationCallback.EVENT.register((dispatcher, buildContext, selection) -> ChunkyFriendsCommand.register(dispatcher, () -> _config, this::onCurveConfigChanged));
+        CommandRegistrationCallback.EVENT.register((dispatcher, buildContext, selection) -> ChunkyFriendsCommand.register(dispatcher, () -> _config, () -> _pregenScheduler, this::onCurveConfigChanged));
     }
 
     private void initializeForServer(final MinecraftServer server)
@@ -91,7 +91,7 @@ public class ChunkyFriends implements ModInitializer
         {
             _config = ChunkyFriendsConfig.load(FabricLoader.getInstance().getConfigDir().resolve("chunky-friends.json"));
             _pregenScheduler = new PregenScheduler(new ChunkyGateway(), _config);
-            ConfigNetworking.registerServerReceivers(_config, this::onCurveConfigChanged);
+            ConfigNetworking.registerServerReceivers(_config, _pregenScheduler, this::onCurveConfigChanged);
         }
         _pregenScheduler.init(server);
     }
