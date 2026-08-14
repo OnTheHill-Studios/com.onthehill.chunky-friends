@@ -23,12 +23,12 @@ public final class ChunkyFriendsConfig
     /**
      * Ceiling radius, in chunks, that the outermost ring tier grows to.
      */
-    private int _maxRadiusChunks = 500;
+    private int _maxRadiusChunks = 100;
 
     /**
      * Number of ring tiers a player's coverage progresses through before being fully covered.
      */
-    private int _ringCount = 10;
+    private int _ringCount = 25;
 
     /**
      * Exponent of the ease-in curve mapping ring tier to radius. {@code 1.0} is linear, {@code 2.0} is quadratic.

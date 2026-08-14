@@ -14,9 +14,12 @@ import org.popcraft.chunky.shape.ShapeType;
  *
  * @implNote {@code isRunning(world)} returning {@code false} and {@link GenerationCompleteEvent} firing both
  *     happen identically whether a task was paused, cancelled, or genuinely finished — neither one
- *     distinguishes the three. Only {@link GenerationProgressEvent#complete()} does, because it is only ever
- *     {@code true} when the task's chunk iterator is actually exhausted. Every completion check built on top
- *     of this class must key off that flag, never off task-map absence alone.
+ *     distinguishes the three. {@link GenerationProgressEvent#complete()} is only ever {@code true} when the
+ *     task's chunk iterator is actually exhausted, but it is a periodic progress tick, not a guaranteed final
+ *     event: a task that finishes faster than the progress cadence (e.g. a ring whose disk is already fully
+ *     generated) can complete with no complete-flagged progress event ever fired. It cannot reliably be used to
+ *     distinguish a genuine completion from a cancel; see {@link com.onthehill.chunkyfriends.scheduler.PregenScheduler#init}
+ *     for why the scheduler built on top of this class no longer tries to.
  */
 public final class ChunkyGateway
 {

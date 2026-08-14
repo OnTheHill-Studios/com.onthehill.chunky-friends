@@ -69,12 +69,22 @@ public final class PregenScheduler
      *     generation work at the time — observed firing concurrently from several different threads
      *     (generic worker threads, C2ME's own worker pool, a dedicated per-world Chunky thread) in the same
      *     session. None of this scheduler's state (the player map, {@code SchedulerState}) is synchronized,
-     *     so handling those callbacks directly on whatever thread calls them is a genuine race — observed in
-     *     practice as the same tier being started repeatedly in a tight loop when a job completed right as a
-     *     player disconnected. Every callback is wrapped to marshal its actual handling onto the main server
-     *     thread via {@link MinecraftServer#execute}, serializing it with everything else this class does
-     *     (join/disconnect handling, the tick loop), which is also simply the correct place for anything that
-     *     touches shared server-side state to run.
+     *     so handling those callbacks directly on whatever thread calls them is a genuine race. Every callback
+     *     is wrapped to marshal its actual handling onto the main server thread via
+     *     {@link MinecraftServer#execute}, serializing it with everything else this class does (join/disconnect
+     *     handling, the tick loop), which is also simply the correct place for anything that touches shared
+     *     server-side state to run. Marshaling only serializes execution though — it does not impose an
+     *     ordering between a progress event and a completion event that originated on two different Chunky
+     *     threads. That was previously load-bearing: completion detection tried to key off whichever progress
+     *     event had most recently set a {@code complete} flag, which silently assumed the terminal
+     *     complete-flagged progress event always lands before the completion event. It doesn't for a
+     *     near-instant task (e.g. a ring whose disk is already fully generated) — the whole task can finish
+     *     faster than the progress-event cadence, so completion fires with no complete-flagged progress event
+     *     ever recorded, misread as a manual cancel, and immediately restart the identical tier — observed in
+     *     practice as the same tier being started repeatedly in a tight loop. {@link #onTaskDisappeared} no
+     *     longer tries to distinguish a genuine completion from a manual cancel at all; both advance the ring
+     *     tier, consistent with this class's existing tolerance elsewhere (see {@link #updatePosition}) for its
+     *     own tier bookkeeping being an approximate heuristic rather than a source of truth.
      */
     public void init(final MinecraftServer server)
     {
@@ -273,7 +283,6 @@ public final class PregenScheduler
             return;
         }
         _ticksSinceLastProgress = 0;
-        _schedulerState._lastCompleteFlag = event.complete();
         _schedulerState._lastProgressPercent = event.progress();
         _schedulerState._lastProgressChunks = event.chunks();
         _schedulerState._lastProgressRate = event.rate();
@@ -299,21 +308,12 @@ public final class PregenScheduler
         {
             return;
         }
-        if (_schedulerState._lastCompleteFlag)
+        final PlayerPregenState state = _playerStates.get(_schedulerState._activePlayerUuid);
+        if (state != null)
         {
-            final PlayerPregenState state = _playerStates.get(_schedulerState._activePlayerUuid);
-            if (state != null)
-            {
-                state.setCurrentRingTier(state.getCurrentRingTier() + 1);
-                LOGGER.info("Pregeneration job for {} in {} completed — now at ring tier {} of {}.",
-                        describe(state), _schedulerState._activeWorld, state.getCurrentRingTier(), _config.getRingCount());
-            }
-        }
-        else
-        {
-            final PlayerPregenState state = _playerStates.get(_schedulerState._activePlayerUuid);
-            LOGGER.warn("Pregeneration job for {} in {} disappeared without a completion signal; assuming a manual cancel.",
-                    describe(state), _schedulerState._activeWorld);
+            state.setCurrentRingTier(state.getCurrentRingTier() + 1);
+            LOGGER.info("Pregeneration job for {} in {} completed — now at ring tier {} of {}.",
+                    describe(state), _schedulerState._activeWorld, state.getCurrentRingTier(), _config.getRingCount());
         }
         clearActiveJob();
         persist();
@@ -339,7 +339,6 @@ public final class PregenScheduler
         _schedulerState._activePlayerUuid = state.getPlayerUuid();
         _schedulerState._activeWorld = state.getLastKnownDimension();
         _schedulerState._presencePaused = false;
-        _schedulerState._lastCompleteFlag = false;
         _ticksSinceLastProgress = 0;
         _lastProgressLogEpochMillis = 0L;
         state.setLastServicedEpochMillis(System.currentTimeMillis());
@@ -363,7 +362,6 @@ public final class PregenScheduler
         _schedulerState._activePlayerUuid = null;
         _schedulerState._activeWorld = null;
         _schedulerState._presencePaused = false;
-        _schedulerState._lastCompleteFlag = false;
         _schedulerState._lastProgressPercent = 0;
         _schedulerState._lastProgressChunks = 0;
         _schedulerState._lastProgressRate = 0;
@@ -426,7 +424,6 @@ public final class PregenScheduler
         private UUID _activePlayerUuid;
         private String _activeWorld;
         private boolean _presencePaused;
-        private boolean _lastCompleteFlag;
         private double _lastProgressPercent;
         private long _lastProgressChunks;
         private double _lastProgressRate;

@@ -127,6 +127,7 @@ public final class ChunkyFriendsConfigScreen extends Screen
 
     private MapPreviewResponsePayload _lastPreviewResponse;
     private DynamicTexture _previewTexture;
+    private int _previewTextureSize;
     private boolean _previewRequestPending;
     private long _lastMaxRadiusEditEpochMillis;
     private boolean _previewTextureDirty;
@@ -377,6 +378,12 @@ public final class ChunkyFriendsConfigScreen extends Screen
     public void onClose()
     {
         _openInstance = null;
+        if (_previewTexture != null)
+        {
+            minecraft.getTextureManager().release(PREVIEW_TEXTURE_ID);
+            _previewTexture = null;
+            _previewTextureSize = 0;
+        }
         minecraft.setScreenAndShow(_parent);
     }
 
@@ -642,9 +649,14 @@ public final class ChunkyFriendsConfigScreen extends Screen
             }
         }
 
-        if (_previewTexture == null)
+        if (_previewTexture == null || _previewTextureSize != _previewPanelSize)
         {
+            if (_previewTexture != null)
+            {
+                _previewTexture.close();
+            }
             _previewTexture = new DynamicTexture(() -> "chunky-friends-map-preview", image);
+            _previewTextureSize = _previewPanelSize;
             minecraft.getTextureManager().register(PREVIEW_TEXTURE_ID, _previewTexture);
         }
         else
